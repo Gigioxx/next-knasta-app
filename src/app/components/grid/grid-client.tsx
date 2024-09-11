@@ -4,28 +4,6 @@ import { useRouter } from 'next/navigation';
 
 type GridType = boolean[][];
 
-const getInitialState = (): GridType => {
-  const params = new URLSearchParams(window.location.search);
-  const state = params.get('state');
-
-  if (state) {
-    try {
-      const coordinates = state.split(',').map((coord) => coord.split('-').map(Number));
-      const initialState = Array.from({ length: 5 }, () => Array(5).fill(false));
-
-      coordinates.forEach(([row, col]) => {
-        initialState[row - 1][col - 1] = true; // Adjust for 1-based indexing
-      });
-
-      return initialState;
-    } catch (error) {
-      console.error('Failed to parse state from URL:', error);
-    }
-  }
-
-  return Array.from({ length: 5 }, () => Array(5).fill(false));
-};
-
 const rotateGrid = (grid: GridType, direction: 'clockwise' | 'counterclockwise'): GridType => {
   const n = grid.length;
   const newGrid = Array.from({ length: n }, () => Array(n).fill(false));
@@ -47,9 +25,9 @@ const rotateGrid = (grid: GridType, direction: 'clockwise' | 'counterclockwise')
   return newGrid;
 };
 
-const Grid: React.FC = () => {
+const GridClient: React.FC<{ initialState: GridType }> = ({ initialState }) => {
   const router = useRouter();
-  const [selectedSquares, setSelectedSquares] = useState<GridType>(getInitialState);
+  const [selectedSquares, setSelectedSquares] = useState<GridType>(initialState);
 
   const handleSquareClick = (row: number, col: number) => {
     const newSelectedSquares = selectedSquares.map((rowArray, rowIndex) =>
@@ -128,4 +106,4 @@ const Grid: React.FC = () => {
   );
 };
 
-export default Grid;
+export default GridClient;
