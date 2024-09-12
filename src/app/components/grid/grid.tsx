@@ -1,23 +1,51 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 type GridType = boolean[][];
 
+const GRID_SIZE = 5;
+
+const createEmptyGrid = (): GridType =>
+  Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+
+const getInitialState = (): GridType => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const state = params.get('state');
+
+    if (state) {
+      try {
+        const coordinates = state.split(',').map((coord) => coord.split('-').map(Number));
+        const initialState = createEmptyGrid();
+
+        coordinates.forEach(([row, col]) => {
+          initialState[row - 1][col - 1] = true; // Adjust for 1-based indexing
+        });
+
+        return initialState;
+      } catch (error) {
+        console.error('Error parsing state:', error);
+      }
+    }
+  }
+
+  return createEmptyGrid();
+};
+
 const rotateGrid = (grid: GridType, direction: 'clockwise' | 'counterclockwise'): GridType => {
-  const n = grid.length;
-  const newGrid = Array.from({ length: n }, () => Array(n).fill(false));
+  const newGrid = createEmptyGrid();
 
   if (direction === 'clockwise') {
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        newGrid[j][n - 1 - i] = grid[i][j];
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        newGrid[j][GRID_SIZE - 1 - i] = grid[i][j];
       }
     }
   } else if (direction === 'counterclockwise') {
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        newGrid[n - 1 - j][i] = grid[i][j];
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        newGrid[GRID_SIZE - 1 - j][i] = grid[i][j];
       }
     }
   }
@@ -25,9 +53,13 @@ const rotateGrid = (grid: GridType, direction: 'clockwise' | 'counterclockwise')
   return newGrid;
 };
 
-const GridClient: React.FC<{ initialState: GridType }> = ({ initialState }) => {
+const Grid: React.FC = () => {
   const router = useRouter();
-  const [selectedSquares, setSelectedSquares] = useState<GridType>(initialState);
+  const [selectedSquares, setSelectedSquares] = useState<GridType>(createEmptyGrid());
+
+  useEffect(() => {
+    setSelectedSquares(getInitialState());
+  }, []);
 
   const handleSquareClick = (row: number, col: number) => {
     const newSelectedSquares = selectedSquares.map((rowArray, rowIndex) =>
@@ -41,27 +73,18 @@ const GridClient: React.FC<{ initialState: GridType }> = ({ initialState }) => {
     );
 
     setSelectedSquares(newSelectedSquares);
-
-    const coordinates = newSelectedSquares
-      .flatMap(
-        (rowArray, rowIndex) =>
-          rowArray.map((square, colIndex) => (square ? `${rowIndex + 1}-${colIndex + 1}` : null)), // Adjust for 1-based indexing
-      )
-      .filter((coord) => coord !== null)
-      .join(',');
-
-    const params = new URLSearchParams(window.location.search);
-
-    params.set('state', coordinates);
-    router.replace(`?${params.toString()}`);
+    updateURLParams(newSelectedSquares);
   };
 
   const handleRotate = (direction: 'clockwise' | 'counterclockwise') => {
     const rotatedGrid = rotateGrid(selectedSquares, direction);
 
     setSelectedSquares(rotatedGrid);
+    updateURLParams(rotatedGrid);
+  };
 
-    const coordinates = rotatedGrid
+  const updateURLParams = (grid: GridType) => {
+    const coordinates = grid
       .flatMap(
         (rowArray, rowIndex) =>
           rowArray.map((square, colIndex) => (square ? `${rowIndex + 1}-${colIndex + 1}` : null)), // Adjust for 1-based indexing
@@ -106,4 +129,4 @@ const GridClient: React.FC<{ initialState: GridType }> = ({ initialState }) => {
   );
 };
 
-export default GridClient;
+export default Grid;
